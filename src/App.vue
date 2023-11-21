@@ -4,15 +4,15 @@ import {bitable, FieldType} from '@lark-base-open/js-sdk';
 import dayjs from "dayjs";
 import moment from "moment";
 
-const Time = ref()
-const input = ref('')
+const Time = ref()				//		获取默认时间
+const input = ref('')			//		绑定输入框
 const Formats = ref([
   'YYYY-MM-DD',
   'YYYY-MM-DD,HH:mm',
   'YY年-MM月-DD日'
-])
-const Handing = ref(false)
-const statusText = ref("等待中")
+])		//		格式绑定
+const Handing = ref(false)		//		是否正在处理中
+const statusText = ref("等待中")	//		状态提示
 const addFormats = ref({
   value: '',
   show: false,
@@ -28,8 +28,8 @@ const addFormats = ref({
 	this.value = ''
 	this.show = false
   }
-})
-const TextToNum = async (val) => {
+})		//		添加格式的类
+const TextToNum = async (val) => {			//		文字转数字
   let timestamp = null
   for (let format of Formats.value) {
 	const parseDate = moment(val, format, true)
@@ -40,7 +40,7 @@ const TextToNum = async (val) => {
   }
   return timestamp
 }
-const NumToText = async (val) => {
+const NumToText = async (val) => {		//		数字转文字
   let Val = val
   if (val.toString().length > 10) {
 	Val = Val / 1000
@@ -51,7 +51,7 @@ const NumToText = async (val) => {
   }
   return time.format(input.value)
 }
-const Review = () => {
+const Review = () => {				//数字转文字格式预览
   const time = new Date()
   console.log(time.valueOf())
   const timeUnix = dayjs.unix(time.valueOf() / 1000)
@@ -62,7 +62,7 @@ const Review = () => {
   }
 
 }
-const textChange = async (mode) => {
+const textChange = async (mode) => {			//核心函数，修改格式
   console.groupEnd()
   if (Handing.value === true) {
 	console.log("正在执行中")
@@ -76,6 +76,8 @@ const textChange = async (mode) => {
 	return
   }
   console.log("开始获取列表")
+
+  //设置状态
   const {tableId, fieldId} = await bitable.base.getSelection();
   if (fieldId === null) {
 	statusText.value = "请选择一个列"
@@ -91,6 +93,7 @@ const textChange = async (mode) => {
   console.group("循环操作表")
   if (mode === "N_ToT") {
 	const arr = []
+	//循环获取一遍值，进行处理修改
 	for (let record of recordIds) {
 	  const cellValue = await table.getCellValue(fieldId, record);
 	  let newVal
@@ -113,12 +116,22 @@ const textChange = async (mode) => {
 	await table.setField(fieldId, {
 	  type: FieldType.Text
 	})
-	let index = 0
-	for (let record of recordIds) {
-	  await numberField.setValue(record, arr[index])
-	  index++
-	}
+	// let index = 0
+	//使用循环将值修改
+	// for (let record of recordIds) {
+	//   await numberField.setValue(record, arr[index])
+	//   index++
+	// }
+	const field = await table.getField(fieldId);
+	const records = recordIds.map((recordId, index) => ({
+	  recordId,
+	  fields: {
+		[field.id]: arr[index]
+	  }
+	}))
+	await table.setRecords(records)
   } else if (mode === "T_ToN") {
+	//else同if的思路
 	const arr = []
 	for (let record of recordIds) {
 	  const cellValue = await table.getCellValue(fieldId, record);
@@ -139,15 +152,26 @@ const textChange = async (mode) => {
 	await table.setField(fieldId, {
 	  type: FieldType.DateTime
 	})
-	let index = 0
-	console.log(arr)
-	for (let record of recordIds) {
-	  await table.setCellValue(fieldId,record, arr[index])
-	  console.log(arr[index])
-	  index++
-	}
+	// let index = 0
+	// console.log(arr)
+	// for (let record of recordIds) {
+	//   await table.setCellValue(fieldId, record, arr[index])
+	//   console.log(arr[index])
+	//   index++
+	// }
+	const field = await table.getField(fieldId);
+	const records = recordIds.map((recordId, index) => ({
+	  recordId,
+	  fields: {
+		[field.id]: arr[index]
+	  }
+	}))
+	await table.setRecords(records)
   }
+
   console.groupEnd()
+
+
   if (FailCount === 0) {
 	statusText.value = "替换完成！全部替换成功"
   } else {
@@ -156,29 +180,30 @@ const textChange = async (mode) => {
   Handing.value = false
 }
 
-const deleteFormats = (index) => {
+const deleteFormats = (index) => {		//删除文本转数字的样式集
   if (Handing.value === true) {
+	statusText.value = "正在执行中"
 	console.log("正在执行中")
 	return
   }
   Formats.value.splice(index, 1)
 }
-const test = async ()=>{
-  const {tableId, fieldId} = await bitable.base.getSelection();
-  const Select =  await bitable.base.getSelection()
-  const table = await bitable.base.getTable(tableId)
-  const recordIds = await table.getRecordIdList()
-  const numberField = await table.getField(fieldId);
-  const fieldMeta = await table.getFieldMetaById(fieldId);
-  console.log({tableId, fieldId, table, recordIds, numberField,Select,fieldMeta})
-}
+// const test = async ()=>{
+//   const {tableId, fieldId} = await bitable.base.getSelection();
+//   const Select =  await bitable.base.getSelection()
+//   const table = await bitable.base.getTable(tableId)
+//   const recordIds = await table.getRecordIdList()
+//   const numberField = await table.getField(fieldId);
+//   const fieldMeta = await table.getFieldMetaById(fieldId);
+//   console.log({tableId, fieldId, table, recordIds, numberField,Select,fieldMeta})
+// }
 onMounted(async () => {
   Time.value = await new Date()
 })
 </script>
 
 <template>
-	<button @click="test"></button>
+  <!--	<button @click="test"></button>-->
   <div class="status">
 	使用指导：{{ statusText }}
   </div>
